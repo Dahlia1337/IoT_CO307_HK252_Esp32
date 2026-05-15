@@ -1,0 +1,54 @@
+#include "task_wifi.h"
+
+void startAP()
+{
+    WiFi.mode(WIFI_AP_STA);
+    WiFi.softAP(String(SSID_AP), String(PASS_AP));
+    Serial.print("AP IP: ");
+    Serial.println(WiFi.softAPIP());
+}
+
+void startSTA()
+{
+    Serial.println("🔄 Đang kết nối WiFi...");
+    if (WIFI_SSID.isEmpty())
+    {
+        return;
+    }
+
+    if (WIFI_PASS.isEmpty())
+    {
+        WiFi.begin(WIFI_SSID.c_str());
+    }
+    else
+    {
+        WiFi.begin(WIFI_SSID.c_str(), WIFI_PASS.c_str());
+    }
+
+    int timeout = 0;
+    while (WiFi.status() != WL_CONNECTED && timeout < 200)
+    {
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+        timeout++;
+    }
+    //Give a semaphore here
+    if (WiFi.status() == WL_CONNECTED) {
+        Serial.print("✅ STA Đã kết nối. Local IP: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        Serial.println("❌ STA Kết nối Thất bại/Timeout.");
+    }
+}
+
+
+bool Wifi_reconnect()
+{
+    const wl_status_t status = WiFi.status();
+    if (status == WL_CONNECTED)
+    {
+        xSemaphoreGive(xBinarySemaphoreInternet); // Phát tín hiệu đã có mạng
+        return true;
+    }
+    startSTA();
+    return false;
+}
